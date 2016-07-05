@@ -339,7 +339,7 @@ class PushLayout(QHBoxLayout):
     def __init__(self, buttons, parent=None):
         QHBoxLayout.__init__(self)
         self.result = parent.result
-        self.dialog = parent.get_dialog()
+        self.dialog = parent.get_main_container()
         for button in buttons:
             label, callback = button
             self.btn = QPushButton(label)
@@ -490,10 +490,18 @@ class FormWidget(QWidget):
             print("COMMENT:", comment)
             print("*"*80)
             
-    def get_dialog(self):
-        """Return FormDialog instance"""
+    def get_main_container(self):
+        """Return main container instance
+
+        main container be default in formlayout is a FormDialog
+        but it can be another class when formalayout is used
+        as a library
+
+        a main container class inherit of MainContainerMixin
+        an defined a 'main_container' attribute
+        """
         dialog = self.parent()
-        while not isinstance(dialog, QDialog):
+        while not hasattr(dialog, 'main_container'):
             dialog = dialog.parent()
         return dialog
 
@@ -581,7 +589,7 @@ class FormWidget(QWidget):
             elif isinstance(value, float):
                 field = QLineEdit(QLocale().toString(value), self)
                 field.setValidator(QDoubleValidator(field))
-                dialog = self.get_dialog()
+                dialog = self.get_main_container()
                 dialog.register_float_field(field)
                 if SIGNAL is None:
                     field.textChanged.connect(dialog.float_valid)
@@ -615,7 +623,7 @@ class FormWidget(QWidget):
                 label = label[:-1] + '<font color="red">*</font>'
                 if isinstance(field, (QLineEdit, QTextEdit, QComboBox,
                                       FileLayout, RadioLayout)):
-                    dialog = self.get_dialog()
+                    dialog = self.get_main_container()
                     dialog.register_required_field(field)
                 else:
                     print("Warning: '%s' doesn't support 'required' feature"\
@@ -882,7 +890,32 @@ class FormTabWidget(QWidget):
         return widgets
 
 
-class FormDialog(QDialog):
+class MainContainerMixin(object):
+    main_container = True
+    result = None
+    type = None
+
+    def register_float_field(self, field):
+        self.float_fields.append(field)
+
+    def register_required_field(self, field):
+        self.required_fields.append(field)
+
+    def float_valid(self):
+        valid = True
+        for field in self.float_fields:
+            if not is_float_valid(field):
+                valid = False
+        self.update_buttons(valid)
+
+    def update_buttons(valid):
+        pass
+
+    def get(self):
+        raise NotImplementedError
+
+
+class FormDialog(QDialog, MainContainerMixin):
     """Form Dialog"""
     def __init__(self, data, title="", comment="", icon=None, parent=None,
                  apply=None, ok=None, cancel=None, result=None, outfile=None,
@@ -987,19 +1020,6 @@ class FormDialog(QDialog):
         if not isinstance(icon, QIcon):
             icon = QWidget().style().standardIcon(QStyle.SP_MessageBoxQuestion)
         self.setWindowIcon(icon)
-        
-    def register_float_field(self, field):
-        self.float_fields.append(field)
-
-    def register_required_field(self, field):
-        self.required_fields.append(field)
-
-    def float_valid(self):
-        valid = True
-        for field in self.float_fields:
-            if not is_float_valid(field):
-                valid = False
-        self.update_buttons(valid)
 
     def required_valid(self):
         valid = True
