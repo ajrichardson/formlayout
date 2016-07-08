@@ -272,6 +272,8 @@ class FileLayout(QHBoxLayout):
     def setStyleSheet(self, style):
         self.lineedit.setStyleSheet(style)
 
+    def setToolTip(self, tooltip):
+        self.lineedit.setToolTip(tooltip)
 
 class SliderLayout(QHBoxLayout):
     """QSlider with QLabel"""
